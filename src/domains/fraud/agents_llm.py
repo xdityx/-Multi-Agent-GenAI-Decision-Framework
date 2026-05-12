@@ -27,27 +27,58 @@ from .rag_retriever import FraudRAGRetriever
 
 
 def _build_llm(temperature: float = 0.3):
-    """Try to build a ChatAnthropic LLM; return None if key is absent."""
-    api_key = os.getenv("ANTHROPIC_API_KEY", "")
-    if not api_key or api_key.startswith("your-"):
-        return None
-    try:
-        from langchain_anthropic import ChatAnthropic
+    """Build an LLM in priority order: Ollama → Anthropic → None (mock).
 
-        return ChatAnthropic(
-            model="claude-3-sonnet-20240229",
-            temperature=temperature,
-            api_key=api_key,
-        )
-    except Exception as exc:
-        print(f"[LLM] Could not initialise Claude: {exc}")
-        return None
+    Priority:
+      1. Local Ollama (OLLAMA_BASE_URL set, or default localhost).
+      2. Anthropic Claude (ANTHROPIC_API_KEY set).
+      3. None → deterministic mock fallback.
+    """
+    base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    model = os.getenv("OLLAMA_MODEL", "mistral")
+
+    try:
+        from langchain_community.llms import Ollama
+
+        llm = Ollama(model=model, base_url=base_url, temperature=temperature)
+        llm.invoke("ping")
+        print(f"[Fraud] Ollama LLM ready: {model} @ {base_url}")
+        return llm
+    except Exception:
+        pass
+
+    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if api_key and not api_key.startswith("your-"):
+        try:
+            from langchain_anthropic import ChatAnthropic
+
+            print("[Fraud] Anthropic Claude LLM ready")
+            return ChatAnthropic(
+                model="claude-3-sonnet-20240229",
+                temperature=temperature,
+                api_key=api_key,
+            )
+        except Exception as exc:
+            print(f"[Fraud] Could not initialise Claude: {exc}")
+
+    return None
 
 
 def _invoke(llm, system: str, user: str, fallback: str) -> str:
-    """Invoke *llm*; return *fallback* if LLM is None or raises."""
+    """Invoke *llm*; return *fallback* if LLM is None or raises.
+
+    Handles both plain-text LLMs (Ollama) and chat models (Anthropic).
+    """
     if llm is None:
         return fallback
+    try:
+        from langchain_community.llms import Ollama
+
+        if isinstance(llm, Ollama):
+            return llm.invoke(f"{system}\n\n{user}")
+    except ImportError:
+        pass
+
     try:
         from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -58,6 +89,8 @@ def _invoke(llm, system: str, user: str, fallback: str) -> str:
     except Exception as exc:
         print(f"[LLM] Invocation error: {exc}")
         return fallback
+
+
 
 
 # ---------------------------------------------------------------------------
