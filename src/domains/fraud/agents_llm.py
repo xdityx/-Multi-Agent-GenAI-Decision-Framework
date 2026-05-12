@@ -27,19 +27,38 @@ from .rag_retriever import FraudRAGRetriever
 
 
 def _build_llm(temperature: float = 0.3):
-    """Build an LLM in priority order: Ollama Cloud → Anthropic → None (mock).
+    """Build LLM in priority order: NVIDIA → Ollama → Anthropic → None (mock).
 
     Priority:
-      1. Ollama Cloud / local — uses Bearer-token auth when OLLAMA_API_KEY set.
-      2. Anthropic Claude — when ANTHROPIC_API_KEY is set.
-      3. None — deterministic mock fallback (tests always pass).
+      1. NVIDIA API — free OpenAI-compatible endpoint (fastest).
+      2. Ollama Cloud / local — ChatOllama with optional Bearer auth.
+      3. Anthropic Claude — when ANTHROPIC_API_KEY is set.
+      4. None — deterministic mock fallback (tests always pass).
     """
+    # ── 1. NVIDIA ────────────────────────────────────────────────────────────
+    nvidia_key = os.getenv("NVIDIA_API_KEY", "")
+    if nvidia_key and not nvidia_key.startswith("your-"):
+        try:
+            from langchain_openai import ChatOpenAI
+
+            llm = ChatOpenAI(
+                api_key=nvidia_key,
+                base_url=os.getenv("NVIDIA_API_BASE", "https://integrate.api.nvidia.com/v1"),
+                model="nvidia/llama-3.1-70b-instruct",
+                temperature=temperature,
+            )
+            print("[Fraud] NVIDIA LLM ready: llama-3.1-70b-instruct")
+            return llm
+        except Exception as exc:
+            print(f"[Fraud] NVIDIA unavailable: {exc}")
+
+    # ── 2. Ollama ────────────────────────────────────────────────────────────
     base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     model = os.getenv("OLLAMA_MODEL", "mistral")
     api_key = os.getenv("OLLAMA_API_KEY", "")
-
     try:
         import httpx
+        from langchain_core.messages import HumanMessage, SystemMessage
         from langchain_ollama import ChatOllama
 
         kwargs: dict = dict(model=model, base_url=base_url, temperature=temperature)
@@ -48,15 +67,14 @@ def _build_llm(temperature: float = 0.3):
                 headers={"Authorization": f"Bearer {api_key}"}
             )
         llm = ChatOllama(**kwargs)
-        # Connectivity check — ChatOllama requires message objects, not plain strings
-        from langchain_core.messages import HumanMessage, SystemMessage
         llm.invoke([SystemMessage(content="You are a helpful assistant."), HumanMessage(content="Say OK")])
         source = "Ollama Cloud" if api_key else "Ollama local"
         print(f"[Fraud] {source} LLM ready: {model}")
         return llm
-    except Exception:
-        pass
+    except Exception as _ollama_exc:
+        print(f"[Fraud] Ollama unavailable: {_ollama_exc}")
 
+    # ── 3. Anthropic ─────────────────────────────────────────────────────────
     anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
     if anthropic_key and not anthropic_key.startswith("your-"):
         try:
@@ -71,7 +89,8 @@ def _build_llm(temperature: float = 0.3):
         except Exception as exc:
             print(f"[Fraud] Could not initialise Claude: {exc}")
 
-    return None
+    return None  # All unavailable — mock mode
+
 
 
 def _invoke(llm, system: str, user: str, fallback: str) -> str:
