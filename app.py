@@ -10,11 +10,16 @@ the domain workflows directly when the API is unreachable.
 from __future__ import annotations
 
 import asyncio
-import json
+import os
 from datetime import datetime
 from typing import Any, Dict, List
 
+from dotenv import load_dotenv
+
+load_dotenv()  # Load .env before domain agents read env vars
+
 import streamlit as st
+
 
 # ── Standalone imports (used when API is down) ──────────────────────────────
 from src.core.schemas import DecisionRequest

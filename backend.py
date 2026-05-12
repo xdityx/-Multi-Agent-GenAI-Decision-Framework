@@ -7,7 +7,12 @@ return the full chain-of-agent reasoning.
 """
 from __future__ import annotations
 
+import os
 from typing import Any, Dict, List, Optional
+
+from dotenv import load_dotenv
+
+load_dotenv()  # Load .env before any domain code reads env vars
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
