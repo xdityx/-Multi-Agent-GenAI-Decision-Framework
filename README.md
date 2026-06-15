@@ -79,12 +79,32 @@ flowchart TD
 
 ## Demo Screenshots
 
-Screenshot placeholders for a recruiter-facing walkthrough:
+### Streamlit Dashboard
 
-- [Dashboard home](assets/dashboard_home.png)
-- [Payments result](assets/payments_result.png)
-- [Agent trace](assets/agent_trace.png)
-- [FastAPI docs](assets/fastapi_docs.png)
+![Dashboard Home](assets/dashboard_home.png)
+
+### Heuristic Payment Decision
+
+![Payment Result](assets/payments_result.png)
+
+### LLM + RAG Decision Mode
+
+![LLM RAG Result](assets/llm_rag_result.png)
+
+### Agent Trace Overview
+
+![Agent Trace Overview](assets/agent_trace/trace_overview.png)
+
+Detailed trace screenshots:
+
+- [Step 1: Data Agent](assets/agent_trace/trace_step_1_data_agent.png)
+- [Step 2: Risk Agent](assets/agent_trace/trace_step_2_risk_agent.png)
+- [Step 3: Decision Agent](assets/agent_trace/trace_step_3_decision_agent.png)
+- [Step 4: Explanation Agent](assets/agent_trace/trace_step_4_explanation_agent.png)
+
+### FastAPI Docs
+
+![FastAPI Docs](assets/fastapi_docs.png)
 
 ## Repository Layout
 
