@@ -247,6 +247,27 @@ Valid demo IDs are generated from synthetic/sample data:
 - Customers: `CUST_00000` through `CUST_00049`
 - Transactions: `TXN_00000000` through `TXN_00000099`
 
+## Docker
+
+Run the local demo stack with Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+Then open:
+
+- FastAPI docs: http://localhost:8000/docs
+- Streamlit dashboard: http://localhost:8501
+
+The Streamlit app does not currently read a backend URL from an environment variable. In Docker, turn on `Use FastAPI backend` in the sidebar and set the backend URL to:
+
+```text
+http://api:8000
+```
+
+The Docker setup is for local demos only. The app can still be run directly with `python backend.py` and `streamlit run app.py`.
+
 ## API Examples
 
 ### Payments
